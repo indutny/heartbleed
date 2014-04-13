@@ -1,0 +1,22 @@
+{
+  "name": "heartbleed",
+  "version": "0.0.0",
+  "description": "Extract server's private key using Heartbleed",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/indutny/heartbleed"
+  },
+  "bin": {
+    "heartbleed": "heartbleed.js"
+  },
+  "main": "heartbleed.js",
+  "author": "Fedor Indutny <fedor@indutny.com>",
+  "license": "MIT",
+  "dependencies": {
+    "asn1.js": "~0.3.0",
+    "asn1.js-rfc3280": "~0.3.0",
+    "bignum": "~0.6.2",
+    "progress": "~1.1.5",
+    "yargs": "~1.2.1"
+  }
+}

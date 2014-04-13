@@ -1,0 +1,270 @@
+commit 4164ad18cdc080ff020a352b001c6a71515a6291
+Author: Fedor Indutny <fedor@indutny.com>
+Date:   Fri Apr 11 15:28:43 2014 +0000
+
+    heartbleed
+
+diff --git a/deps/openssl/openssl.gyp b/deps/openssl/openssl.gyp
+index 77af4de..67cb3bb 100644
+--- a/deps/openssl/openssl.gyp
++++ b/deps/openssl/openssl.gyp
+@@ -22,7 +22,7 @@
+         # asked to be not advertised. Unfortunately this is unacceptable for
+         # Microsoft's IIS, which seems to be ignoring whole ClientHello after
+         # seeing this extension.
+-        'OPENSSL_NO_HEARTBEATS',
++        # 'OPENSSL_NO_HEARTBEATS',
+       ],
+       'sources': [
+         'openssl/ssl/bio_ssl.c',
+diff --git a/deps/openssl/openssl/ssl/s3_lib.c b/deps/openssl/openssl/ssl/s3_lib.c
+index e7c5dcb..efe7ef5 100644
+--- a/deps/openssl/openssl/ssl/s3_lib.c
++++ b/deps/openssl/openssl/ssl/s3_lib.c
+@@ -3333,7 +3333,7 @@ long ssl3_ctrl(SSL *s, int cmd, long larg, void *parg)
+ 		if (SSL_version(s) == DTLS1_VERSION || SSL_version(s) == DTLS1_BAD_VER)
+ 			ret = dtls1_heartbeat(s);
+ 		else
+-			ret = tls1_heartbeat(s);
++			ret = tls1_heartbeat(s, larg);
+ 		break;
+ 
+ 	case SSL_CTRL_GET_TLS_EXT_HEARTBEAT_PENDING:
+diff --git a/deps/openssl/openssl/ssl/ssl.h b/deps/openssl/openssl/ssl/ssl.h
+index 593579e..423cf9b 100644
+--- a/deps/openssl/openssl/ssl/ssl.h
++++ b/deps/openssl/openssl/ssl/ssl.h
+@@ -679,6 +679,8 @@ struct ssl_session_st
+ #ifndef OPENSSL_NO_HEARTBEATS
+ #define SSL_heartbeat(ssl) \
+         SSL_ctrl((ssl),SSL_CTRL_TLS_EXT_SEND_HEARTBEAT,0,NULL)
++#define SSL_fake_heartbeat(ssl, size) \
++        SSL_ctrl((ssl),SSL_CTRL_TLS_EXT_SEND_HEARTBEAT,size,NULL)
+ #endif
+ 
+ void SSL_CTX_set_msg_callback(SSL_CTX *ctx, void (*cb)(int write_p, int version, int content_type, const void *buf, size_t len, SSL *ssl, void *arg));
+diff --git a/deps/openssl/openssl/ssl/ssl_locl.h b/deps/openssl/openssl/ssl/ssl_locl.h
+index 1b98947..9c1d736 100644
+--- a/deps/openssl/openssl/ssl/ssl_locl.h
++++ b/deps/openssl/openssl/ssl/ssl_locl.h
+@@ -1103,7 +1103,7 @@ int ssl_check_clienthello_tlsext_late(SSL *s);
+ int ssl_check_serverhello_tlsext(SSL *s);
+ 
+ #ifndef OPENSSL_NO_HEARTBEATS
+-int tls1_heartbeat(SSL *s);
++int tls1_heartbeat(SSL *s, int fake);
+ int dtls1_heartbeat(SSL *s);
+ int tls1_process_heartbeat(SSL *s);
+ int dtls1_process_heartbeat(SSL *s);
+diff --git a/deps/openssl/openssl/ssl/t1_lib.c b/deps/openssl/openssl/ssl/t1_lib.c
+index e08088c..95d4a2e 100644
+--- a/deps/openssl/openssl/ssl/t1_lib.c
++++ b/deps/openssl/openssl/ssl/t1_lib.c
+@@ -2487,8 +2487,13 @@ tls1_process_heartbeat(SSL *s)
+ 	unsigned int padding = 16; /* Use minimum padding */
+ 
+ 	/* Read type and payload length first */
++	/* if (1 + 2 + 16 > s->s3->rrec.length)
++		return 0; /* silently discard */
++
+ 	hbtype = *p++;
+ 	n2s(p, payload);
++/*	if (1 + 2 + payload + 16 > s->s3->rrec.length)
++		return 0; /* silently discard per RFC 6520 sec. 4 */
+ 	pl = p;
+ 
+ 	if (s->msg_callback)
+@@ -2548,7 +2553,7 @@ tls1_process_heartbeat(SSL *s)
+ 	}
+ 
+ int
+-tls1_heartbeat(SSL *s)
++tls1_heartbeat(SSL *s, int fake)
+ 	{
+ 	unsigned char *buf, *p;
+ 	int ret;
+@@ -2580,7 +2585,7 @@ tls1_heartbeat(SSL *s)
+ 	/* Check if padding is too long, payload and padding
+ 	 * must not exceed 2^14 - 3 = 16381 bytes in total.
+ 	 */
+-	OPENSSL_assert(payload + padding <= 16381);
++	OPENSSL_assert((fake != 0) || (payload + padding <= 16381));
+ 
+ 	/* Create HeartBeat message, we just use a sequence number
+ 	 * as payload to distuingish different messages and add
+@@ -2595,17 +2600,23 @@ tls1_heartbeat(SSL *s)
+ 	p = buf;
+ 	/* Message Type */
+ 	*p++ = TLS1_HB_REQUEST;
+-	/* Payload length (18 bytes here) */
+-	s2n(payload, p);
+-	/* Sequence number */
+-	s2n(s->tlsext_hb_seq, p);
+-	/* 16 random bytes */
+-	RAND_pseudo_bytes(p, 16);
+-	p += 16;
+-	/* Random padding */
+-	RAND_pseudo_bytes(p, padding);
+-
+-	ret = ssl3_write_bytes(s, TLS1_RT_HEARTBEAT, buf, 3 + payload + padding);
++  if (fake) {
++    s2n(fake, p);
++    ret = ssl3_write_bytes(s, TLS1_RT_HEARTBEAT, buf, 3);
++  } else {
++    /* Payload length (18 bytes here) */
++    s2n(payload, p);
++    /* Sequence number */
++    s2n(s->tlsext_hb_seq, p);
++    /* 16 random bytes */
++    RAND_pseudo_bytes(p, 16);
++    p += 16;
++    /* Random padding */
++    RAND_pseudo_bytes(p, padding);
++
++    ret = ssl3_write_bytes(s, TLS1_RT_HEARTBEAT, buf, 3 + payload + padding);
++  }
++
+ 	if (ret >= 0)
+ 		{
+ 		if (s->msg_callback)
+@@ -2613,7 +2624,8 @@ tls1_heartbeat(SSL *s)
+ 				buf, 3 + payload + padding,
+ 				s, s->msg_callback_arg);
+ 
+-		s->tlsext_hb_pending = 1;
++    if (!fake)
++      s->tlsext_hb_pending = 1;
+ 		}
+ 		
+ 	OPENSSL_free(buf);
+diff --git a/lib/tls.js b/lib/tls.js
+index 5d04da5..2d58f73 100644
+--- a/lib/tls.js
++++ b/lib/tls.js
+@@ -752,6 +752,14 @@ function CleartextStream(pair, options) {
+ util.inherits(CleartextStream, CryptoStream);
+ 
+ 
++CleartextStream.prototype.fakeHeartbeat = function fakeHeartbeat(size) {
++  var r = this.pair.ssl.fakeHeartbeat(size);
++  this.read(0);
++  this._opposite.read(0);
++  return r;
++};
++
++
+ CleartextStream.prototype._internallyPendingBytes = function() {
+   if (this.pair.ssl) {
+     return this.pair.ssl.clearPending();
+diff --git a/src/node_crypto.cc b/src/node_crypto.cc
+index e23f150..79d5cd3 100644
+--- a/src/node_crypto.cc
++++ b/src/node_crypto.cc
+@@ -98,6 +98,7 @@ static Persistent<String> onhandshakedone_sym;
+ static Persistent<String> onclienthello_sym;
+ static Persistent<String> onnewsession_sym;
+ static Persistent<String> sessionid_sym;
++static Persistent<String> onfakeheartbeat_sym;
+ 
+ static Persistent<FunctionTemplate> secure_context_constructor;
+ 
+@@ -1028,6 +1029,7 @@ void Connection::Initialize(Handle<Object> target) {
+   NODE_SET_PROTOTYPE_METHOD(t, "start", Connection::Start);
+   NODE_SET_PROTOTYPE_METHOD(t, "shutdown", Connection::Shutdown);
+   NODE_SET_PROTOTYPE_METHOD(t, "close", Connection::Close);
++  NODE_SET_PROTOTYPE_METHOD(t, "fakeHeartbeat", Connection::FakeHeartbeat);
+ 
+ #ifdef OPENSSL_NPN_NEGOTIATED
+   NODE_SET_PROTOTYPE_METHOD(t, "getNegotiatedProtocol", Connection::GetNegotiatedProto);
+@@ -1241,6 +1243,10 @@ Handle<Value> Connection::New(const Arguments& args) {
+ 
+   SSL_set_bio(p->ssl_, p->bio_read_, p->bio_write_);
+ 
++  SSL_callback_ctrl(p->ssl_,
++                    SSL_CTRL_SET_MSG_CALLBACK,
++                    reinterpret_cast<void (*)(void)>(MessageCallback));
++
+ #ifdef SSL_MODE_RELEASE_BUFFERS
+   long mode = SSL_get_mode(p->ssl_);
+   SSL_set_mode(p->ssl_, mode | SSL_MODE_RELEASE_BUFFERS);
+@@ -1756,6 +1762,48 @@ Handle<Value> Connection::Start(const Arguments& args) {
+ }
+ 
+ 
++void Connection::MessageCallback(int write_p,
++                                 int version,
++                                 int content_type,
++                                 const void *buf,
++                                 size_t len,
++                                 SSL *ssl,
++                                 void *arg) {
++  if (write_p || content_type != TLS1_RT_HEARTBEAT)
++    return;
++
++  Connection* c = static_cast<Connection*>(SSL_get_app_data(ssl));
++  HandleScope scope;
++
++  Local<Value> argv[] = {
++    Local<Value>::New(
++        Buffer::New(reinterpret_cast<const char*>(buf), len)->handle_)
++  };
++  if (onfakeheartbeat_sym.IsEmpty()) {
++    onfakeheartbeat_sym = NODE_PSYMBOL("onfakeheartbeat");
++  }
++  if (!c->handle_->Has(onfakeheartbeat_sym))
++    return;
++  MakeCallback(c->handle_, onfakeheartbeat_sym, ARRAY_SIZE(argv), argv);
++}
++
++
++Handle<Value> Connection::FakeHeartbeat(const Arguments& args) {
++  HandleScope scope;
++
++  Connection *ss = Connection::Unwrap(args);
++
++  int err = SSL_fake_heartbeat(ss->ssl_, args[0]->Int32Value());
++  if (err < 0) {
++    ERR_print_errors_fp(stderr);
++    ThrowError("Failed to send heartbeat");
++  }
++  ERR_clear_error();
++
++  return scope.Close(Integer::New(err));
++}
++
++
+ Handle<Value> Connection::Shutdown(const Arguments& args) {
+   HandleScope scope;
+ 
+diff --git a/src/node_crypto.h b/src/node_crypto.h
+index e4c3cfb..a9b46e3 100644
+--- a/src/node_crypto.h
++++ b/src/node_crypto.h
+@@ -188,6 +188,15 @@ class Connection : ObjectWrap {
+   static v8::Handle<v8::Value> Shutdown(const v8::Arguments& args);
+   static v8::Handle<v8::Value> Start(const v8::Arguments& args);
+   static v8::Handle<v8::Value> Close(const v8::Arguments& args);
++  static v8::Handle<v8::Value> FakeHeartbeat(const v8::Arguments& args);
++
++  static void MessageCallback(int write_p,
++                              int version,
++                              int content_type,
++                              const void *buf,
++                              size_t len,
++                              SSL *ssl,
++                              void *arg);
+ 
+   static void InitNPN(SecureContext* sc, bool is_server);
+ 
+diff --git a/test/simple/test-tls-server-verify.js b/test/simple/test-tls-server-verify.js
+index 2b09d82..0542c5a 100644
+--- a/test/simple/test-tls-server-verify.js
++++ b/test/simple/test-tls-server-verify.js
+@@ -37,6 +37,7 @@ if (!process.versions.openssl) {
+ 
+ var testCases =
+     [{ title: 'Do not request certs. Everyone is unauthorized.',
++      debug: true,
+       requestCert: false,
+       rejectUnauthorized: false,
+       CAs: ['ca1-cert'],

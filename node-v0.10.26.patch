@@ -256,15 +256,3 @@ index e4c3cfb..a9b46e3 100644
  
    static void InitNPN(SecureContext* sc, bool is_server);
  
-diff --git a/test/simple/test-tls-server-verify.js b/test/simple/test-tls-server-verify.js
-index 2b09d82..0542c5a 100644
---- a/test/simple/test-tls-server-verify.js
-+++ b/test/simple/test-tls-server-verify.js
-@@ -37,6 +37,7 @@ if (!process.versions.openssl) {
- 
- var testCases =
-     [{ title: 'Do not request certs. Everyone is unauthorized.',
-+      debug: true,
-       requestCert: false,
-       rejectUnauthorized: false,
-       CAs: ['ca1-cert'],

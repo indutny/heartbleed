@@ -1,5 +1,5 @@
 {
-  "name": "heartbleed",
+  "name": "heartbleed.js",
   "version": "0.1.1",
   "description": "Extract server's private key using Heartbleed",
   "repository": {

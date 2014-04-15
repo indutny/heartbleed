@@ -1,6 +1,6 @@
 {
   "name": "heartbleed",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Extract server's private key using Heartbleed",
   "repository": {
     "type": "git",

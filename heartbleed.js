@@ -123,6 +123,7 @@ function test(chunk) {
       size: 'auto'
     });
     if (m.mod(prime).eq(zero)) {
+      console.error('Found key!');
       console.log('The prime is: ' + prime.toString(16) + '\n');
       console.log('The private key is:\n' + getPrivateKey(prime, m) + '\n');
 

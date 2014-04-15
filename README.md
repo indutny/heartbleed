@@ -2,6 +2,9 @@
 
 Extracting server private key using [Heartbleed][0] OpenSSL vulnerability.
 
+NOTE: Using this tool against other's servers is illegal in the most of the
+countries.
+
 ## How to use
 
 You will need patched node.js version in order to be able to run this script.

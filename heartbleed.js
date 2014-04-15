@@ -39,7 +39,11 @@ dns.lookup(argv.host, function(err, addr) {
 });
 
 function heartbleed(ip, port, host) {
-  var s = tls.connect(port, ip, function() {
+  var s = tls.connect({
+    port: port,
+    host: ip,
+    ciphers: argv.ciphers || null
+  }, function() {
     // Lazily load `m` and `e`
     if (!m) {
       console.error('Cert loaded...');

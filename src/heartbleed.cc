@@ -146,6 +146,7 @@ static void Initialize(Handle<Object> target) {
   // Skip app-data index
   if (wrapper_index == 0)
     wrapper_index = SSL_get_ex_new_index(0, NULL, NULL, NULL, NULL);
+  assert(wrapper_index != 0);
 
   onheartbeat_sym = Persistent<String>::New(String::New("onheartbeat"));
 

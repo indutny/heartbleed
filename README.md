@@ -7,29 +7,8 @@ countries.
 
 ## How to use
 
-You will need patched node.js version in order to be able to run this script.
-The instructions of compiling it are following:
-
 ```bash
-git clone git://github.com/indutny/heartbleed
-git clone git://github.com/joyent/node -b v0.10.26 node-hb
-cd node-hb
-git apply ../heartbleed/node-v0.10.26.patch
-./configure --prefix=$HOME/.node/0.10.26-hb
-make -j24 install
-ls ./node
-```
-
-Then you could just install this script using npm:
-
-```bash
-export PATH="$HOME/.node/0.10.26-hb/bin:$PATH"
-npm install -g heartbleed.js
-```
-
-And run it:
-
-```bash
+$ npm install -g heartbleed.js
 $ heartbleed
 Options:
   --host         [required]

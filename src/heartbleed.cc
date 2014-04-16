@@ -2,6 +2,8 @@
 #include "node_buffer.h"
 #include "openssl/err.h"
 
+#include <assert.h>
+
 namespace heartbleed {
 
 using namespace node;
@@ -125,6 +127,7 @@ Handle<Value> SSLWrap::New(const Arguments& args) {
   HandleScope scope;
 
   SSLWrap* w = new SSLWrap();
+  assert(current_wrap_ == NULL);
   current_wrap_ = w;
   w->Wrap(args.This());
 

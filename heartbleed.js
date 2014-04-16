@@ -87,7 +87,7 @@ function heartbleed(ip, port, host) {
       acc = [];
       total = 0;
       var max = 0xffff;
-      if (argv.random)
+      if (!argv['no-random'])
         sent = ((Math.random() * (max - 1)) | 0) + 1;
       else
         sent = max;

@@ -29,10 +29,11 @@ DispatchAlertFunction MethodWrap<M>::ssl_alert_;
 
 template <MethodFunction M>
 MethodWrap<M>::MethodWrap() {
-  ssl_ctrl_ = M()->ssl_ctrl;
-  ssl_alert_ = M()->ssl_dispatch_alert;
-  const_cast<SSL_METHOD*>(M())->ssl_ctrl = Ctrl;
-  const_cast<SSL_METHOD*>(M())->ssl_dispatch_alert = DispatchAlert;
+  SSL_METHOD* m = const_cast<SSL_METHOD*>(M());
+  ssl_ctrl_ = m->ssl_ctrl;
+  ssl_alert_ = m->ssl_dispatch_alert;
+  m->ssl_ctrl = Ctrl;
+  m->ssl_dispatch_alert = DispatchAlert;
 }
 
 

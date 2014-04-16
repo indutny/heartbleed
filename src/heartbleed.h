@@ -7,7 +7,6 @@ namespace heartbleed {
 
 typedef const SSL_METHOD* (*MethodFunction)(void);
 typedef long (*CtrlFunction)(SSL*, int, long, void*);
-typedef int (*ReadBytesFunction)(SSL*, int, unsigned char*, int, int);
 typedef int (*DispatchAlertFunction)(SSL*);
 
 template <MethodFunction M>
@@ -17,13 +16,11 @@ class MethodWrap {
 
  protected:
   static long Ctrl(SSL* s, int cmd, long larg, void* parg);
-  static int ReadBytes(SSL* s, int type, unsigned char* buf, int len, int peek);
   static int DispatchAlert(SSL* s);
 
   static void ProcessHeartbeat(SSL* ssl, SSL3_RECORD* rr);
 
   static CtrlFunction ssl_ctrl_;
-  static ReadBytesFunction ssl_read_;
   static DispatchAlertFunction ssl_alert_;
 };
 

@@ -24,18 +24,14 @@ static MethodWrap<TLSv1_2_client_method> t12_client;
 template <MethodFunction M>
 CtrlFunction MethodWrap<M>::ssl_ctrl_;
 template <MethodFunction M>
-ReadBytesFunction MethodWrap<M>::ssl_read_;
-template <MethodFunction M>
 DispatchAlertFunction MethodWrap<M>::ssl_alert_;
 
 
 template <MethodFunction M>
 MethodWrap<M>::MethodWrap() {
   ssl_ctrl_ = M()->ssl_ctrl;
-  ssl_read_ = M()->ssl_read_bytes;
   ssl_alert_ = M()->ssl_dispatch_alert;
   const_cast<SSL_METHOD*>(M())->ssl_ctrl = Ctrl;
-  const_cast<SSL_METHOD*>(M())->ssl_read_bytes = ReadBytes;
   const_cast<SSL_METHOD*>(M())->ssl_dispatch_alert = DispatchAlert;
 }
 
@@ -59,16 +55,6 @@ long MethodWrap<M>::Ctrl(SSL* s, int cmd, long larg, void* parg) {
   M()->ssl_write_bytes(s, TLS1_RT_HEARTBEAT, buf, 3);
 
   return 0;
-}
-
-
-template <MethodFunction M>
-int MethodWrap<M>::ReadBytes(SSL* s,
-                             int type,
-                             unsigned char* buf,
-                             int len,
-                             int peek) {
-  return ssl_read_(s, type, buf, len, peek);
 }
 
 

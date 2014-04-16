@@ -9,6 +9,16 @@ typedef const SSL_METHOD* (*MethodFunction)(void);
 typedef long (*CtrlFunction)(SSL*, int, long, void*);
 typedef int (*DispatchAlertFunction)(SSL*);
 
+class Unprotect {
+ public:
+  Unprotect(SSL_METHOD* m);
+  ~Unprotect();
+
+ private:
+  void* addr_;
+  size_t size_;
+};
+
 template <MethodFunction M>
 class MethodWrap {
  public:

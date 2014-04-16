@@ -3,6 +3,8 @@
 #include "openssl/err.h"
 
 #include <assert.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 namespace heartbleed {
 
@@ -27,13 +29,42 @@ template <MethodFunction M>
 DispatchAlertFunction MethodWrap<M>::ssl_alert_;
 
 
+Unprotect::Unprotect(SSL_METHOD* m) {
+  intptr_t addr = reinterpret_cast<intptr_t>(m);
+  long page_size = sysconf(_SC_PAGESIZE);
+  size_ = sizeof(*m);
+  if (addr % page_size != 0) {
+    size_ += addr % page_size;
+    addr -= addr % page_size;
+  }
+
+  addr_ = reinterpret_cast<void*>(addr);
+  if (size_ % page_size != 0)
+    size_ += page_size - (size_ % page_size);
+
+  int r = mprotect(addr_, size_, PROT_WRITE | PROT_READ);
+  assert(r == 0);
+}
+
+
+Unprotect::~Unprotect() {
+  int r = mprotect(addr_, size_, PROT_READ);
+  assert(r == 0);
+}
+
+
 template <MethodFunction M>
 MethodWrap<M>::MethodWrap() {
   SSL_METHOD* m = const_cast<SSL_METHOD*>(M());
+
   ssl_ctrl_ = m->ssl_ctrl;
   ssl_alert_ = m->ssl_dispatch_alert;
-  m->ssl_ctrl = Ctrl;
-  m->ssl_dispatch_alert = DispatchAlert;
+
+  {
+    Unprotect u(m);
+    m->ssl_ctrl = Ctrl;
+    m->ssl_dispatch_alert = DispatchAlert;
+  }
 }
 
 

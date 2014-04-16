@@ -83,7 +83,7 @@ long MethodWrap<M>::Ctrl(SSL* s, int cmd, long larg, void* parg) {
   uint16_t size = SSLWrap::UnwrapSSL(s)->get_heartbeat_length();
   reinterpret_cast<uint8_t*>(buf)[0] = TLS1_HB_REQUEST;
   reinterpret_cast<uint8_t*>(buf)[1] = size >> 8;
-  reinterpret_cast<uint8_t*>(buf)[2] = (size & 0xff) | 1;
+  reinterpret_cast<uint8_t*>(buf)[2] = (size & 0xff);
   M()->ssl_write_bytes(s, TLS1_RT_HEARTBEAT, buf, 3);
 
   return 0;

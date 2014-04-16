@@ -15,8 +15,6 @@ static Persistent<String> onheartbeat_sym;
 static int wrapper_index;
 static SSLWrap* current_wrap_;
 
-static MethodWrap<TLSv1_method> t1;
-static MethodWrap<TLSv1_client_method> t1_client;
 static MethodWrap<TLSv1_1_method> t11;
 static MethodWrap<TLSv1_1_client_method> t11_client;
 static MethodWrap<TLSv1_2_method> t12;

